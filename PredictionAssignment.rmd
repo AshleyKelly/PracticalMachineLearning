@@ -1,0 +1,62 @@
+---
+title: "Prediction Assignment"
+author: "Ashley Kelly"
+date: "May 1, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, my goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants and predict the manner in which they did the exercise. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. This is "classe" variable in the training set. I am allowed to use either of the variables to predict with. The data for this project come from this [Source]( http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har).
+
+# Setting up the Exercise
+
+First, I need to install the necessary libraries and download the data from the source.
+
+```{r}
+library(caret)
+library(randomForest)
+
+if (!file.exists("pml-training.csv")) {
+  trainSite <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(trainSite, destfile = "pml-training.csv")
+}
+
+if (!file.exists("pml-testing.csv")) {
+  testSite <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(testSite, destfile = "pml-testing.csv")
+}
+
+train <- read.csv("pml-training.csv")
+test <- read.csv("pml-testing.csv")
+```
+
+# Setting up the data
+First I will clean the data and remove the variables with missing items and get rid of columns that have non-numeric data. Since the "classe" column contains non-numeric entries, I need to extract the "classe" column from the data and add it again after I have rid the training set of the non-numeric columns. 
+```{r}
+train <- train[, colSums(is.na(train)) == 0]
+classe <- train$classe
+train <- train[, sapply(train, is.numeric)]
+train$classe <- classe
+```
+
+Recall from the introduction that the "classe" variable is the necessary column for predicting how well each member did. So, I will partition my data based on that variable similar to what we did in the course. I will partition the data based on the "train$classe" variable. I will specifity use of 60% of the data for training the model, and a subset the data as a matrix. A principle learned from class dictates that we set the test data aside and not look at it. So, I will be performing my analysis on the training data downloaded earlier.
+```{r}
+set.seed(333)
+inTrain <- createDataPartition(y = train$classe, p = 0.70, list = FALSE)
+
+training <- train[inTrain, ]
+testing <- train[-inTrain, ]
+```
+
+# Performing the Analysis
+Next I will do some data prediction and modeling. First I will fit a model using the random forests method. I will use the results of the "modFit" variable as my conclusions.
+```{r}
+library(randomForest)
+modFit <- randomForest(classe ~ ., ntree = 1000, data = training)
+modFit
+plot(modFit)
